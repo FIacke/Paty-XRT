@@ -782,7 +782,9 @@ function showTask(type) {
     buildMicUI(content);
      } else if (type === 'fort') {
     buildFortUI(content);
-  } else {
+     } else if (type === 'guess') {
+    buildGuessUI(content);
+  } else { 
     // Остальные задания — пока текстовые заглушки
     content.innerHTML = '<div style="padding:30px;font-size:16px;opacity:0.7;">' +
                         '🎯 Задание скоро появится в следующем обновлении!</div>';
@@ -1079,6 +1081,91 @@ function buildFortUI(container) {
       c.textContent = '';
     });
   };
+}
+ 
+// ==================== УГАДАЙ КТО ====================
+function buildGuessUI(container) {
+  container.innerHTML = `
+    <div style="font-size:15px;margin-bottom:10px;opacity:0.85;">
+      ✍️ Опиши одного из игроков (не называя имени):
+    </div>
+    <textarea id="guessText" placeholder="Например: всегда опаздывает, любит кофе, громко смеётся..."
+      style="width:92%;padding:10px;font-size:15px;border-radius:10px;border:2px solid #555;background:rgba(30,30,60,0.7);color:#e0e0ff;resize:vertical;min-height:70px;font-family:inherit;outline:none;"></textarea>
+    <div style="margin:15px 0 8px;font-size:15px;opacity:0.85;">
+      🎨 А теперь нарисуй его:
+    </div>
+    <canvas id="guessCanvas" width="500" height="240"
+      style="background:white;border-radius:10px;touch-action:none;cursor:crosshair;display:block;margin:0 auto;max-width:100%;box-shadow:0 0 20px rgba(255,77,159,0.5);"></canvas>
+    <div class="palette" id="guessPalette"></div>
+    <div class="tool-row">
+      <button class="size-btn active" data-size="2" data-target="guess">Тонко</button>
+      <button class="size-btn" data-size="4" data-target="guess">Средне</button>
+      <button class="size-btn" data-size="10" data-target="guess">Толсто</button>
+      <button id="guessClear">🗑 Очистить</button>
+    </div>
+  `;
+
+  const canvas = document.getElementById('guessCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = currentColor;
+  ctx.lineWidth = currentSize;
+
+  const colors = ['#000000', '#ff4d4d', '#4d9fff', '#4dff88', '#ffcc00',
+                  '#a066ff', '#ff4d9f', '#ffa64d', '#8B4513', '#ffffff'];
+  const palette = document.getElementById('guessPalette');
+  colors.forEach(c => {
+    const sw = document.createElement('div');
+    sw.className = 'color-swatch' + (c === currentColor ? ' active' : '');
+    sw.style.background = c;
+    sw.onclick = () => {
+      currentColor = c;
+      ctx.strokeStyle = c;
+      palette.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+      sw.classList.add('active');
+    };
+    palette.appendChild(sw);
+  });
+
+  container.querySelectorAll('.size-btn[data-target="guess"]').forEach(b => {
+    b.onclick = () => {
+      currentSize = parseInt(b.dataset.size);
+      ctx.lineWidth = currentSize;
+      container.querySelectorAll('.size-btn[data-target="guess"]').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    };
+  });
+
+  document.getElementById('guessClear').onclick = () => {
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  };
+
+  let drawing = false;
+  const getPos = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    let clientX, clientY;
+    if (e.touches) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; }
+    else { clientX = e.clientX; clientY = e.clientY; }
+    return [
+      (clientX - rect.left) * (canvas.width / rect.width),
+      (clientY - rect.top) * (canvas.height / rect.height)
+    ];
+  };
+  const start = (e) => { e.preventDefault(); drawing = true; const [x,y] = getPos(e); ctx.beginPath(); ctx.moveTo(x,y); };
+  const move  = (e) => { if (!drawing) return; e.preventDefault(); const [x,y] = getPos(e); ctx.lineTo(x,y); ctx.stroke(); };
+  const stop  = () => { drawing = false; };
+
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  canvas.addEventListener('mouseup', stop);
+  canvas.addEventListener('mouseleave', stop);
+  canvas.addEventListener('touchstart', start, { passive: false });
+  canvas.addEventListener('touchmove', move, { passive: false });
+  canvas.addEventListener('touchend', stop);
 }
 </script>
 </body>

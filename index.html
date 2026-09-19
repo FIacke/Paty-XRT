@@ -49,7 +49,7 @@
     background: #2e2e4f; border: 2px solid #555;
     min-width: 120px;
   }
-  .score-card.active { border-color: #ffcc00; box-shadow: 0 0 15px #ffcc00; }
+  .score-card.active { box-shadow: 0 0 15px #ffcc00; }
   .score-card .name { font-weight: bold; font-size: 16px; }
   .score-card .pts { font-size: 24px; color: #ffcc00; }
   
@@ -133,7 +133,6 @@
   }
   .btn-done { background: #4dff88; color: #1e1e2f; }
   .btn-fail { background: #ff4d4d; color: white; }
-  .btn-close { background: #555; color: white; }
   
   #finishModal {
     display: none;
@@ -255,7 +254,6 @@ let players = [];
 let currentPlayerIndex = 0;
 let isMoving = false;
 let timerInterval = null;
-let currentTaskBonus = false;
 
 // ==================== СТАРТОВЫЙ ЭКРАН ====================
 document.querySelectorAll('.player-btn').forEach(btn => {
@@ -273,7 +271,6 @@ function startGame() {
   document.getElementById('startScreen').style.display = 'none';
   document.getElementById('gameScreen').style.display = 'block';
   
-  // Создаём игроков
   players = [];
   for (let i = 1; i <= playerCount; i++) {
     players.push({ id: i, name: COLORS[i].name, color: COLORS[i].css, pos: 0, score: 0 });
@@ -300,7 +297,6 @@ function buildBoard() {
     num.textContent = i + 1;
     cell.appendChild(num);
     
-    // Иконка для особых клеток
     if (CELL_TYPES[i] !== 'normal') {
       const icon = document.createElement('div');
       icon.className = 'icon';
@@ -311,7 +307,6 @@ function buildBoard() {
     board.appendChild(cell);
   }
   
-  // Расставляем фишки в первую клетку
   const firstCell = document.getElementById('cell-0');
   players.forEach(p => {
     const piece = document.createElement('div');
@@ -336,8 +331,8 @@ function updateScoreboard() {
     const card = document.createElement('div');
     card.className = 'score-card' + (idx === currentPlayerIndex ? ' active' : '');
     card.style.borderColor = idx === currentPlayerIndex ? '#ffcc00' : p.color;
-    card.innerHTML = `<div class="name" style="color:${p.color}">${p.name}</div>
-                      <div class="pts">${p.score}</div>`;
+    card.innerHTML = '<div class="name" style="color:' + p.color + '">' + p.name + '</div>' +
+                     '<div class="pts">' + p.score + '</div>';
     sb.appendChild(card);
   });
 }
@@ -371,19 +366,15 @@ function rollDice() {
       clearInterval(interval);
       isMoving = false;
       
-      // Проверяем, на какую клетку попали
       const cellType = CELL_TYPES[player.pos];
       
       if (player.pos === TOTAL_CELLS - 1) {
-        // Финиш
-        player.score += 5; // бонус за финиш
+        player.score += 5;
         updateScoreboard();
-        setTimeout(() => showFinish(), 500);
+        setTimeout(showFinish, 500);
       } else if (cellType !== 'normal') {
-        // Особая клетка — показываем задание
         setTimeout(() => showTask(cellType), 400);
       } else {
-        // Обычная — просто передаём ход
         setTimeout(nextTurn, 600);
       }
     }
@@ -411,7 +402,6 @@ function showTask(type) {
   document.getElementById('taskText').textContent = task.text;
   document.getElementById('taskModal').classList.add('show');
   
-  // Таймер 90 секунд
   let timeLeft = 90;
   const timerEl = document.getElementById('taskTimer');
   timerEl.textContent = timeLeft;
@@ -443,13 +433,12 @@ function finishTask(success) {
 
 // ==================== ФИНАЛ ====================
 function showFinish() {
-  // Сортируем по очкам
   const sorted = [...players].sort((a, b) => b.score - a.score);
   const list = document.getElementById('finalScores');
   list.innerHTML = '';
   sorted.forEach(p => {
     const li = document.createElement('li');
-    li.innerHTML = `<span style="color:${p.color};font-weight:bold">${p.name}</span> — ${p.score} очков`;
+    li.innerHTML = '<span style="color:' + p.color + ';font-weight:bold">' + p.name + '</span> — ' + p.score + ' очков';
     list.appendChild(li);
   });
   document.getElementById('finishModal').classList.add('show');

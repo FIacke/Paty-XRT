@@ -742,9 +742,11 @@ function showTask(type) {
   const content = document.getElementById('taskContent');
   content.innerHTML = '';
 
-  // Сейчас реализован только холст (для type === 'draw')
+  // Определяем, какое задание показать
   if (type === 'draw') {
     buildDrawUI(content);
+  } else if (type === 'sound') {
+    buildMicUI(content);
   } else {
     // Остальные задания — пока текстовые заглушки
     content.innerHTML = '<div style="padding:30px;font-size:16px;opacity:0.7;">' +
@@ -890,6 +892,102 @@ function showFinish() {
       setTimeout(() => c.remove(), 5000);
     }, i * 40);
   }
+ 
+// ==================== МИКРОФОН ====================
+let mediaRecorder = null;
+let audioChunks = [];
+let audioBlob = null;
+let audioURL = null;
+
+function buildMicUI(container) {
+  container.innerHTML = `
+    <div style="font-size:15px;margin-bottom:15px;opacity:0.85;">
+      🎤 Запиши любой звук или фразу. Потом прослушай и дай остальным повторить!
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:15px;padding:10px;">
+      <div id="micStatus" style="font-size:16px;color:#ffcc00;min-height:24px;text-shadow:0 0 10px #ffcc00;">
+        Нажми «Начать запись»
+      </div>
+      <div id="micPulse" style="width:70px;height:70px;border-radius:50%;background:rgba(255,77,77,0.15);border:3px solid #ff4d4d;display:flex;align-items:center;justify-content:center;font-size:32px;transition:all 0.3s;">
+        🎤
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+        <button id="micRecBtn" style="padding:13px 25px;border:none;border-radius:12px;font-weight:bold;font-size:15px;cursor:pointer;background:linear-gradient(135deg,#ff4d4d,#aa2222);color:white;box-shadow:0 0 20px rgba(255,77,77,0.6);">
+          🔴 Начать запись
+        </button>
+        <button id="micPlayBtn" disabled style="padding:13px 25px;border:none;border-radius:12px;font-weight:bold;font-size:15px;cursor:pointer;background:linear-gradient(135deg,#4d9fff,#2266aa);color:white;box-shadow:0 0 20px rgba(77,159,255,0.6);opacity:0.4;">
+          ▶️ Прослушать
+        </button>
+      </div>
+    </div>
+  `;
+
+  const recBtn = document.getElementById('micRecBtn');
+  const playBtn = document.getElementById('micPlayBtn');
+  const status = document.getElementById('micStatus');
+  const pulse = document.getElementById('micPulse');
+
+  audioChunks = [];
+  audioBlob = null;
+  audioURL = null;
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    try { mediaRecorder.stop(); } catch(e) {}
+  }
+
+  recBtn.onclick = async () => {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) audioChunks.push(e.data);
+      };
+      mediaRecorder.onstop = () => {
+        audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        audioURL = URL.createObjectURL(audioBlob);
+        playBtn.disabled = false;
+        playBtn.style.opacity = '1';
+        recBtn.textContent = '🔴 Начать запись';
+        recBtn.style.background = 'linear-gradient(135deg,#ff4d4d,#aa2222)';
+        status.textContent = '✅ Записано! Нажми «Прослушать»';
+        status.style.color = '#4dff88';
+        status.style.textShadow = '0 0 10px #4dff88';
+        pulse.style.background = 'rgba(77,255,136,0.15)';
+        pulse.style.borderColor = '#4dff88';
+        pulse.textContent = '✅';
+        pulse.style.animation = 'none';
+        stream.getTracks().forEach(t => t.stop());
+      };
+      mediaRecorder.start();
+      recBtn.textContent = '⏹ Остановить';
+      recBtn.style.background = 'linear-gradient(135deg,#ffcc00,#ff8800)';
+      recBtn.style.color = '#1e1e2f';
+      status.textContent = '🎤 Идёт запись... Говори!';
+      status.style.color = '#ff4d4d';
+      status.style.textShadow = '0 0 10px #ff4d4d';
+      pulse.style.background = 'rgba(255,77,77,0.4)';
+      pulse.style.borderColor = '#ff4d4d';
+      pulse.textContent = '🔴';
+      pulse.style.animation = 'timerPulse 0.8s ease-in-out infinite';
+    } catch (err) {
+      status.textContent = '❌ Нет доступа к микрофону. Разреши в браузере.';
+      status.style.color = '#ff4d4d';
+      status.style.textShadow = '0 0 10px #ff4d4d';
+    }
+  };
+
+  playBtn.onclick = () => {
+    if (audioURL) {
+      const audio = new Audio(audioURL);
+      audio.play();
+      status.textContent = '▶️ Воспроизведение...';
+    }
+  };
+}
 }
 </script>
 </body>

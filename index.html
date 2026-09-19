@@ -941,13 +941,19 @@ function buildMicUI(container) {
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream);
+           // Safari: mp4, Chrome/Firefox: webm
+      const mimeType = MediaRecorder.isTypeSupported('audio/mp4')
+        ? 'audio/mp4'
+        : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '');
+      mediaRecorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
       audioChunks = [];
       mediaRecorder.ondataavailable = e => {
         if (e.data.size > 0) audioChunks.push(e.data);
       };
       mediaRecorder.onstop = () => {
-        audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/mp4' });
         audioURL = URL.createObjectURL(audioBlob);
         playBtn.disabled = false;
         playBtn.style.opacity = '1';
@@ -980,11 +986,25 @@ function buildMicUI(container) {
     }
   };
 
-  playBtn.onclick = () => {
-    if (audioURL) {
+    playBtn.onclick = () => {
+    if (!audioURL) return;
+    try {
       const audio = new Audio(audioURL);
-      audio.play();
-      status.textContent = '▶️ Воспроизведение...';
+      audio.volume = 1.0;
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          status.textContent = '▶️ Воспроизведение...';
+        }).catch(err => {
+          status.textContent = '❌ Ошибка: ' + err.message;
+          status.style.color = '#ff4d4d';
+          status.style.textShadow = '0 0 10px #ff4d4d';
+        });
+      }
+    } catch (err) {
+      status.textContent = '❌ Ошибка: ' + err.message;
+      status.style.color = '#ff4d4d';
+      status.style.textShadow = '0 0 10px #ff4d4d';
     }
   };
 }

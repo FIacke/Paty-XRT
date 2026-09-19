@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Paty-XRT — Настольная игра</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1e1e2f;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 { color: #ffcc00; }
+        #board {
+            display: grid;
+            grid-template-columns: repeat(5, 100px);
+            gap: 10px;
+            justify-content: center;
+            margin: 20px auto;
+        }
+        .cell {
+            width: 100px;
+            height: 100px;
+            background: #2e2e4f;
+            border: 2px solid #555;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            position: relative;
+        }
+        .cell.active { border-color: #ffcc00; box-shadow: 0 0 15px #ffcc00; }
+        .player {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            position: absolute;
+            bottom: 5px;
+            transition: all 0.3s ease;
+        }
+        #p1 { background: #ff4d4d; left: 10px; }
+        #p2 { background: #4d9fff; right: 10px; }
+        #controls { margin-top: 20px; }
+        button {
+            padding: 15px 30px;
+            font-size: 18px;
+            background: #ffcc00;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background: #ffdb4d; }
+        #dice-result { font-size: 24px; margin-top: 15px; color: #ffcc00; }
+    </style>
+</head>
+<body>
+    <h1>🎲 Paty-XRT</h1>
+    <p>Ход игрока: <span id="turn">Красный</span></p>
+
+    <div id="board"></div>
+
+    <div id="controls">
+        <button onclick="rollDice()">Бросить кубик</button>
+        <div id="dice-result">—</div>
+    </div>
+
+    <script>
+        // Настройки игры
+        const TOTAL_CELLS = 15; // Количество клеток на поле
+        const board = document.getElementById('board');
+        let playerPos = { p1: 0, p2: 0 };
+        let currentPlayer = 'p1';
+        let isMoving = false;
+
+        // Создаём игровое поле
+        for (let i = 0; i < TOTAL_CELLS; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.id = 'cell-' + i;
+            cell.textContent = i + 1;
+            
+            // Добавляем фишки в первую клетку
+            if (i === 0) {
+                const p1 = document.createElement('div');
+                p1.className = 'player';
+                p1.id = 'p1';
+                cell.appendChild(p1);
+
+                const p2 = document.createElement('div');
+                p2.className = 'player';
+                p2.id = 'p2';
+                cell.appendChild(p2);
+            }
+            board.appendChild(cell);
+        }
+
+        // Подсветка текущей клетки
+        function highlightCell(index) {
+            document.querySelectorAll('.cell').forEach(c => c.classList.remove('active'));
+            const cell = document.getElementById('cell-' + index);
+            if (cell) cell.classList.add('active');
+        }
+        highlightCell(0);
+
+        // Бросок кубика
+        function rollDice() {
+            if (isMoving) return;
+            isMoving = true;
+
+            const dice = Math.floor(Math.random() * 6) + 1;
+            document.getElementById('dice-result').textContent = 'Выпало: ' + dice;
+
+            // Перемещаем фишку
+            let pos = playerPos[currentPlayer];
+            let target = Math.min(pos + dice, TOTAL_CELLS - 1);
+
+            const interval = setInterval(() => {
+                if (pos < target) {
+                    pos++;
+                    playerPos[currentPlayer] = pos;
+                    movePiece(currentPlayer, pos);
+                    highlightCell(pos);
+                } else {
+                    clearInterval(interval);
+                    isMoving = false;
+                    
+                    // Проверка победы
+                    if (pos === TOTAL_CELLS - 1) {
+                        setTimeout(() => {
+                            alert('🎉 Победил ' + (currentPlayer === 'p1' ? 'Красный' : 'Синий') + '!');
+                            resetGame();
+                        }, 300);
+                        return;
+                    }
+
+                    // Передача хода
+                    currentPlayer = currentPlayer === 'p1' ? 'p2' : 'p1';
+                    document.getElementById('turn').textContent = currentPlayer === 'p1' ? 'Красный' : 'Синий';
+                    document.getElementById('turn').style.color = currentPlayer === 'p1' ? '#ff4d4d' : '#4d9fff';
+                }
+            }, 200);
+        }
+
+        // Перемещение фишки в нужную клетку
+        function movePiece(playerId, cellIndex) {
+            const piece = document.getElementById(playerId);
+            const targetCell = document.getElementById('cell-' + cellIndex);
+            targetCell.appendChild(piece);
+        }
+
+        // Сброс игры
+        function resetGame() {
+            playerPos = { p1: 0, p2: 0 };
+            currentPlayer = 'p1';
+            document.getElementById('turn').textContent = 'Красный';
+            document.getElementById('turn').style.color = '#fff';
+            document.getElementById('dice-result').textContent = '—';
+            
+            const firstCell = document.getElementById('cell-0');
+            firstCell.appendChild(document.getElementById('p1'));
+            firstCell.appendChild(document.getElementById('p2'));
+            highlightCell(0);
+        }
+    </script>
+</body>
+</html>

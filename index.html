@@ -13,7 +13,7 @@
     min-height: 100vh;
   }
   h1 { color: #ffcc00; margin: 0 0 10px; }
-  
+
   /* Стартовый экран */
   #startScreen {
     max-width: 500px; margin: 60px auto;
@@ -37,7 +37,7 @@
     cursor: pointer;
   }
   .start-go:disabled { opacity: 0.4; cursor: not-allowed; }
-  
+
   /* Игровой экран */
   #gameScreen { display: none; }
   #scoreboard {
@@ -52,36 +52,47 @@
   .score-card.active { box-shadow: 0 0 15px #ffcc00; }
   .score-card .name { font-weight: bold; font-size: 16px; }
   .score-card .pts { font-size: 24px; color: #ffcc00; }
-  
+
   #turnInfo { font-size: 20px; margin: 10px 0; }
-  
+
+  /* Поле: 6 колонок для 30 клеток */
   #board {
     display: grid;
-    grid-template-columns: repeat(5, 100px);
-    gap: 10px;
+    grid-template-columns: repeat(6, 95px);
+    gap: 8px;
     justify-content: center;
     margin: 20px auto;
   }
   .cell {
-    width: 100px; height: 100px;
+    width: 95px; height: 95px;
     background: #2e2e4f;
     border: 2px solid #555;
     border-radius: 10px;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    font-size: 12px; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: bold; position: relative;
     transition: all 0.3s;
+    color: rgba(255,255,255,0.7);
   }
   .cell.active { border-color: #ffcc00; box-shadow: 0 0 20px #ffcc00; }
-  .cell .num { position: absolute; top: 4px; left: 6px; font-size: 11px; opacity: 0.5; }
-  .cell .icon { font-size: 30px; }
+
+  /* Стартовая клетка */
+  .cell.cell-start {
+    background: #4a4a2e;
+    border: 3px solid #ffcc00;
+    color: #ffcc00;
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+
+  /* Типы заданий */
   .cell.type-sound { background: #3a2e4f; border-color: #a066ff; }
-  .cell.type-draw { background: #2e4a3f; border-color: #4dff88; }
-  .cell.type-fort { background: #4a3a2e; border-color: #ffa64d; }
+  .cell.type-draw  { background: #2e4a3f; border-color: #4dff88; }
+  .cell.type-fort  { background: #4a3a2e; border-color: #ffa64d; }
   .cell.type-guess { background: #4a2e3a; border-color: #ff4d9f; }
-  
+
   .player {
-    width: 22px; height: 22px;
+    width: 20px; height: 20px;
     border-radius: 50%;
     position: absolute; bottom: 4px;
     border: 2px solid rgba(255,255,255,0.6);
@@ -89,9 +100,23 @@
   }
   .p1 { background: #ff4d4d; left: 6px; }
   .p2 { background: #4d9fff; right: 6px; }
-  .p3 { background: #4dff88; left: 6px; bottom: 30px; }
-  .p4 { background: #ffcc00; right: 6px; bottom: 30px; }
-  
+  .p3 { background: #4dff88; left: 6px; bottom: 28px; }
+  .p4 { background: #ffcc00; right: 6px; bottom: 28px; }
+
+  /* Легенда */
+  #legend {
+    display: flex; justify-content: center; gap: 15px;
+    flex-wrap: wrap; margin: 10px 0 20px; font-size: 13px;
+  }
+  .legend-item {
+    padding: 5px 12px; border-radius: 8px;
+    border: 2px solid #555; background: #2e2e4f;
+  }
+  .legend-item.type-sound { border-color: #a066ff; }
+  .legend-item.type-draw  { border-color: #4dff88; }
+  .legend-item.type-fort  { border-color: #ffa64d; }
+  .legend-item.type-guess { border-color: #ff4d9f; }
+
   #controls { margin-top: 15px; }
   #rollBtn {
     padding: 15px 40px; font-size: 20px;
@@ -101,7 +126,7 @@
   }
   #rollBtn:disabled { opacity: 0.4; cursor: not-allowed; }
   #diceResult { font-size: 20px; margin-top: 10px; color: #ffcc00; }
-  
+
   /* Попап задания */
   #taskModal {
     display: none;
@@ -133,7 +158,8 @@
   }
   .btn-done { background: #4dff88; color: #1e1e2f; }
   .btn-fail { background: #ff4d4d; color: white; }
-  
+
+  /* Финал */
   #finishModal {
     display: none;
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -159,7 +185,7 @@
 </head>
 <body>
 
-<!-- ========= СТАРТОВЫЙ ЭКРАН ========= -->
+<!-- СТАРТОВЫЙ ЭКРАН -->
 <div id="startScreen">
   <h1>🎲 Paty-XRT</h1>
   <h2>Сколько игроков?</h2>
@@ -170,26 +196,27 @@
   </div>
   <br>
   <button class="start-go" id="startBtn" disabled>Начать игру</button>
-  <p style="opacity:0.6;font-size:14px;margin-top:20px;">
-    🎤 звук · 🎨 рисунок · 🏰 крепость · 🕵️ угадай
-  </p>
 </div>
 
-<!-- ========= ИГРОВОЙ ЭКРАН ========= -->
+<!-- ИГРОВОЙ ЭКРАН -->
 <div id="gameScreen">
   <h1>🎲 Paty-XRT</h1>
   <div id="scoreboard"></div>
   <div id="turnInfo">Ход игрока: <span id="turnName">—</span></div>
-  
   <div id="board"></div>
-  
+  <div id="legend">
+    <div class="legend-item type-sound">🎤 Микрофон</div>
+    <div class="legend-item type-draw">🎨 Рисунок</div>
+    <div class="legend-item type-fort">🏰 Крепость</div>
+    <div class="legend-item type-guess">🕵️ Угадай кто</div>
+  </div>
   <div id="controls">
     <button id="rollBtn" onclick="rollDice()">Бросить кубик</button>
     <div id="diceResult">—</div>
   </div>
 </div>
 
-<!-- ========= ПОПАП ЗАДАНИЯ ========= -->
+<!-- ПОПАП ЗАДАНИЯ -->
 <div id="taskModal">
   <div class="task-box">
     <div class="task-icon" id="taskIcon">🎤</div>
@@ -203,7 +230,7 @@
   </div>
 </div>
 
-<!-- ========= ФИНАЛЬНЫЙ ЭКРАН ========= -->
+<!-- ФИНАЛ -->
 <div id="finishModal">
   <div class="finish-box">
     <h2>🏆 Игра окончена!</h2>
@@ -221,41 +248,35 @@ const COLORS = {
   4: { name: 'Жёлтый',  css: '#ffcc00' }
 };
 
+// Клетки: индекс 0 — СТАРТ, дальше 30 игровых клеток
+// 'start' — стартовая линия, 'normal' — пустая, остальные — задания
 const CELL_TYPES = [
-  'normal','normal','sound','normal','draw',
-  'normal','fort','normal','normal','guess',
-  'sound','normal','draw','normal','fort'
+  'start',
+  // 1..30
+  'normal','normal','sound','normal','draw','normal',
+  'fort','normal','normal','guess','sound','normal',
+  'draw','normal','fort','normal','sound','normal',
+  'guess','normal','draw','normal','fort','normal',
+  'sound','normal','guess','normal','draw','fort'
 ];
 
 const TASKS = {
-  sound: {
-    icon: '🎤', title: 'Повтори звук',
-    text: 'Слушай звук, который издаёт сосед справа. Повтори его как можно точнее!'
-  },
-  draw: {
-    icon: '🎨', title: 'Нарисуй друга',
-    text: 'У тебя 90 секунд, чтобы нарисовать любого игрока за столом. Остальные угадывают, кто это.'
-  },
-  fort: {
-    icon: '🏰', title: 'Построй крепость',
-    text: 'Из подручных предметов (или на бумаге) построй крепость за 90 секунд. Остальные оценивают.'
-  },
-  guess: {
-    icon: '🕵️', title: 'Угадай кто',
-    text: 'Опиши одного из игроков словами (не называя имени). Остальные должны угадать, кто это.'
-  }
+  sound: { icon: '🎤', title: 'Повтори звук',      text: 'Слушай звук, который издаёт сосед справа. Повтори его как можно точнее!' },
+  draw:  { icon: '🎨', title: 'Нарисуй друга',     text: 'У тебя 90 секунд, чтобы нарисовать любого игрока за столом. Остальные угадывают, кто это.' },
+  fort:  { icon: '🏰', title: 'Построй крепость',  text: 'Из подручных предметов (или на бумаге) построй крепость за 90 секунд. Остальные оценивают.' },
+  guess: { icon: '🕵️', title: 'Угадай кто',        text: 'Опиши одного из игроков словами (не называя имени). Остальные должны угадать, кто это.' }
 };
 
-const TOTAL_CELLS = 15;
+const TOTAL_CELLS = CELL_TYPES.length; // 31 (старт + 30)
 
-// ==================== СОСТОЯНИЕ ИГРЫ ====================
+// ==================== СОСТОЯНИЕ ====================
 let playerCount = 0;
 let players = [];
 let currentPlayerIndex = 0;
 let isMoving = false;
 let timerInterval = null;
 
-// ==================== СТАРТОВЫЙ ЭКРАН ====================
+// ==================== СТАРТ ====================
 document.querySelectorAll('.player-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('selected'));
@@ -264,57 +285,53 @@ document.querySelectorAll('.player-btn').forEach(btn => {
     document.getElementById('startBtn').disabled = false;
   });
 });
-
 document.getElementById('startBtn').addEventListener('click', startGame);
 
 function startGame() {
   document.getElementById('startScreen').style.display = 'none';
   document.getElementById('gameScreen').style.display = 'block';
-  
+
   players = [];
   for (let i = 1; i <= playerCount; i++) {
     players.push({ id: i, name: COLORS[i].name, color: COLORS[i].css, pos: 0, score: 0 });
   }
   currentPlayerIndex = 0;
-  
+
   buildBoard();
   updateScoreboard();
   updateTurn();
 }
 
-// ==================== ИГРОВОЕ ПОЛЕ ====================
+// ==================== ПОЛЕ ====================
 function buildBoard() {
   const board = document.getElementById('board');
   board.innerHTML = '';
-  
+
   for (let i = 0; i < TOTAL_CELLS; i++) {
     const cell = document.createElement('div');
-    cell.className = 'cell type-' + CELL_TYPES[i];
+    const type = CELL_TYPES[i];
+    cell.className = 'cell' + (type === 'start' ? ' cell-start' : ' type-' + type);
     cell.id = 'cell-' + i;
-    
-    const num = document.createElement('div');
-    num.className = 'num';
-    num.textContent = i + 1;
-    cell.appendChild(num);
-    
-    if (CELL_TYPES[i] !== 'normal') {
-      const icon = document.createElement('div');
-      icon.className = 'icon';
-      icon.textContent = TASKS[CELL_TYPES[i]].icon;
-      cell.appendChild(icon);
+
+    // Текст клетки
+    if (type === 'start') {
+      cell.textContent = 'СТАРТ';
+    } else {
+      cell.textContent = i; // номер от 1 до 30
     }
-    
+
     board.appendChild(cell);
   }
-  
-  const firstCell = document.getElementById('cell-0');
+
+  // Фишки на старте
+  const startCell = document.getElementById('cell-0');
   players.forEach(p => {
     const piece = document.createElement('div');
     piece.className = 'player p' + p.id;
     piece.id = 'piece-' + p.id;
-    firstCell.appendChild(piece);
+    startCell.appendChild(piece);
   });
-  
+
   highlightCell(0);
 }
 
@@ -345,34 +362,38 @@ function updateTurn() {
   updateScoreboard();
 }
 
-// ==================== БРОСОК КУБИКА ====================
+// ==================== КУБИК ====================
 function rollDice() {
   if (isMoving) return;
   isMoving = true;
   document.getElementById('rollBtn').disabled = true;
-  
+
   const dice = Math.floor(Math.random() * 6) + 1;
   document.getElementById('diceResult').textContent = 'Выпало: ' + dice;
-  
+
   const player = players[currentPlayerIndex];
   const target = Math.min(player.pos + dice, TOTAL_CELLS - 1);
-  
+
   const interval = setInterval(() => {
     if (player.pos < target) {
       player.pos++;
+      // +1 очко за каждый шаг
+      player.score += 1;
       movePiece(player.id, player.pos);
       highlightCell(player.pos);
+      updateScoreboard();
     } else {
       clearInterval(interval);
       isMoving = false;
-      
+
       const cellType = CELL_TYPES[player.pos];
-      
+
+      // Финиш (последняя клетка поля)
       if (player.pos === TOTAL_CELLS - 1) {
         player.score += 5;
         updateScoreboard();
         setTimeout(showFinish, 500);
-      } else if (cellType !== 'normal') {
+      } else if (cellType !== 'normal' && cellType !== 'start') {
         setTimeout(() => showTask(cellType), 400);
       } else {
         setTimeout(nextTurn, 600);
@@ -401,12 +422,11 @@ function showTask(type) {
   document.getElementById('taskTitle').textContent = task.title;
   document.getElementById('taskText').textContent = task.text;
   document.getElementById('taskModal').classList.add('show');
-  
+
   let timeLeft = 90;
   const timerEl = document.getElementById('taskTimer');
   timerEl.textContent = timeLeft;
   timerEl.classList.remove('ok');
-  
   clearInterval(timerInterval);
   timerInterval = setInterval(() => {
     timeLeft--;
@@ -422,12 +442,10 @@ function showTask(type) {
 function finishTask(success) {
   clearInterval(timerInterval);
   document.getElementById('taskModal').classList.remove('show');
-  
   if (success) {
     players[currentPlayerIndex].score += 2;
     updateScoreboard();
   }
-  
   setTimeout(nextTurn, 400);
 }
 

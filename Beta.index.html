@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paty-XRT — Neon Edition</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #0a0a14;
+    color: #e0e0ff;
+    text-align: center;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body {
+    background:
+      radial-gradient(circle at 20% 10%, rgba(160,102,255,0.15), transparent 40%),
+      radial-gradient(circle at 80% 90%, rgba(77,255,136,0.12), transparent 40%),
+      radial-gradient(circle at 50% 50%, rgba(255,77,159,0.08), transparent 60%),
+      #0a0a14;
+    padding: 20px;
+  }
+
+  h1 {
+    color: #ffcc00;
+    text-shadow: 0 0 10px #ffcc00, 0 0 25px #ff8800, 0 0 40px #ff4400;
+    font-size: 42px;
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+    animation: titlePulse 2.5s ease-in-out infinite;
+  }
+  @keyframes titlePulse {
+    0%, 100% { text-shadow: 0 0 10px #ffcc00, 0 0 25px #ff8800, 0 0 40px #ff4400; }
+    50% { text-shadow: 0 0 20px #ffcc00, 0 0 40px #ff8800, 0 0 70px #ff4400; }
+  }
+
+  /* Стартовый экран */
+  #startScreen {
+    max-width: 560px;
+    margin: 50px auto;
+    background: rgba(30,30,60,0.55);
+    backdrop-filter: blur(15px);
+    padding: 40px 30px;
+    border-radius: 25px;
+    border: 2px solid rgba(160,102,255,0.5);
+    box-shadow: 0 0 40px rgba(160,102,255,0.35), inset 0 0 30px rgba(160,102,255,0.1);
+    animation: fadeIn 0.6s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  #startScreen h2 {
+    color: #a066ff;
+    text-shadow: 0 0 12px #a066ff;
+    margin-bottom: 25px;
+    font-size: 24px;
+  }
+  .player-btn {
+    display: inline-block;
+    padding: 15px 32px;
+    margin: 8px;
+    background: rgba(46,46,79,0.7);
+    border: 2px solid #555;
+    color: #e0e0ff;
+    border-radius: 14px;
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .player-btn:hover {
+    border-color: #a066ff;
+    box-shadow: 0 0 20px rgba(160,102,255,0.6);
+    transform: translateY(-3px);
+  }
+  .player-btn.selected {
+    background: linear-gradient(135deg, #a066ff, #ff4d9f);
+    color: white;
+    border-color: #ff4d9f;
+    box-shadow: 0 0 25px rgba(255,77,159,0.8);
+    transform: scale(1.05);
+  }
+  .start-go {
+    margin-top: 25px;
+    padding: 16px 60px;
+    background: linear-gradient(135deg, #ffcc00, #ff8800);
+    color: #1e1e2f;
+    border: none;
+    border-radius: 14px;
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 0 0 25px rgba(255,204,0,0.6);
+    transition: all 0.3s ease;
+  }
+  .start-go:hover:not(:disabled) {
+    transform: scale(1.07);
+    box-shadow: 0 0 40px rgba(255,204,0,0.9);
+  }
+  .start-go:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
+
+  /* Игровой экран */
+  #gameScreen { display: none; animation: fadeIn 0.6s ease; }
+
+  #scoreboard {
+    display: flex; justify-content: center; gap: 15px;
+    margin: 20px 0 10px; flex-wrap: wrap;
+  }
+  .score-card {
+    padding: 12px 22px;
+    border-radius: 14px;
+    background: rgba(30,30,60,0.65);
+    border: 2px solid #555;
+    min-width: 130px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .score-card.active {
+    box-shadow: 0 0 25px currentColor;
+    transform: translateY(-4px);
+  }
+  .score-card::after {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, currentColor, transparent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.5s ease;
+  }
+  .score-card.active::after { transform: scaleX(1); }
+  .score-card .name { font-weight: bold; font-size: 15px; letter-spacing: 0.5px; }
+  .score-card .pts {
+    font-size: 28px;
+    color: #ffcc00;
+    text-shadow: 0 0 10px #ffcc00;
+    transition: all 0.3s ease;
+  }
+  .score-card .pts.bump { animation: bump 0.4s ease; }
+  @keyframes bump {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.4); color: #4dff88; text-shadow: 0 0 20px #4dff88; }
+    100% { transform: scale(1); }
+  }
+
+  #turnInfo {
+    font-size: 20px; margin: 15px 0;
+    text-shadow: 0 0 8px currentColor;
+  }
+
+  /* Поле */
+  #board {
+    display: grid;
+    grid-template-columns: repeat(6, 95px);
+    gap: 10px;
+    justify-content: center;
+    margin: 25px auto;
+  }
+  .cell {
+    width: 95px; height: 95px;
+    background: rgba(30,30,60,0.65);
+    border: 2px solid rgba(120,120,180,0.4);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: bold;
+    position: relative;
+    color: rgba(200,200,255,0.7);
+    transition: all 0.35s ease;
+    cursor: default;
+  }
+  .cell.active {
+    border-color: #ffcc00;
+    box-shadow: 0 0 25px #ffcc00, inset 0 0 15px rgba(255,204,0,0.3);
+    color: #ffcc00;
+    text-shadow: 0 0 10px #ffcc00;
+    animation: cellPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes cellPulse {
+    0%, 100% { box-shadow: 0 0 20px #ffcc00, inset 0 0 15px rgba(255,204,0,0.2); }
+    50% { box-shadow: 0 0 35px #ffcc00, inset 0 0 25px rgba(255,204,0,0.4); }
+  }
+
+  .cell.cell-start {
+    background: linear-gradient(135deg, rgba(255,204,0,0.25), rgba(255,136,0,0.15));
+    border: 2px solid #ffcc00;
+    color: #ffcc00;
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px #ffcc00;
+    box-shadow: 0 0 20px rgba(255,204,0,0.4);
+  }
+
+  /* Типы заданий — неоновые */
+  .cell.type-sound {
+    background: linear-gradient(135deg, rgba(160,102,255,0.15), rgba(80,40,160,0.2));
+    border-color: #a066ff;
+    box-shadow: 0 0 12px rgba(160,102,255,0.3);
+  }
+  .cell.type-draw {
+    background: linear-gradient(135deg, rgba(77,255,136,0.12), rgba(20,120,60,0.2));
+    border-color: #4dff88;
+    box-shadow: 0 0 12px rgba(77,255,136,0.3);
+  }
+  .cell.type-fort {
+    background: linear-gradient(135deg, rgba(255,166,77,0.15), rgba(160,80,20,0.2));
+    border-color: #ffa64d;
+    box-shadow: 0 0 12px rgba(255,166,77,0.3);
+  }
+  .cell.type-guess {
+    background: linear-gradient(135deg, rgba(255,77,159,0.15), rgba(160,20,80,0.2));
+    border-color: #ff4d9f;
+    box-shadow: 0 0 12px rgba(255,77,159,0.3);
+  }
+
+  .player {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    position: absolute; bottom: 5px;
+    border: 2px solid rgba(255,255,255,0.85);
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 2;
+  }
+  .p1 { background: #ff4d4d; left: 6px;  box-shadow: 0 0 12px #ff4d4d; }
+  .p2 { background: #4d9fff; right: 6px; box-shadow: 0 0 12px #4d9fff; }
+  .p3 { background: #4dff88; left: 6px;  bottom: 30px; box-shadow: 0 0 12px #4dff88; }
+  .p4 { background: #ffcc00; right: 6px; bottom: 30px; box-shadow: 0 0 12px #ffcc00; }
+
+  /* Легенда */
+  #legend {
+    display: flex; justify-content: center; gap: 12px;
+    flex-wrap: wrap; margin: 15px 0 25px; font-size: 13px;
+  }
+  .legend-item {
+    padding: 6px 14px;
+    border-radius: 10px;
+    background: rgba(30,30,60,0.6);
+    border: 2px solid #555;
+    transition: all 0.3s ease;
+  }
+  .legend-item.type-sound { border-color: #a066ff; box-shadow: 0 0 12px rgba(160,102,255,0.4); }
+  .legend-item.type-draw  { border-color: #4dff88; box-shadow: 0 0 12px rgba(77,255,136,0.4); }
+  .legend-item.type-fort  { border-color: #ffa64d; box-shadow: 0 0 12px rgba(255,166,77,0.4); }
+  .legend-item.type-guess { border-color: #ff4d9f; box-shadow: 0 0 12px rgba(255,77,159,0.4); }
+
+  /* Кубик и кнопка */
+  #controls { margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 15px; }
+  .dice-display {
+    width: 90px; height: 90px;
+    background: linear-gradient(135deg, #ffcc00, #ff8800);
+    border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 50px; font-weight: bold;
+    color: #1e1e2f;
+    box-shadow: 0 0 30px rgba(255,204,0,0.7), inset 0 -6px 12px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+  }
+  .dice-display.rolling {
+    animation: diceRoll 0.6s ease infinite;
+  }
+  @keyframes diceRoll {
+    0%   { transform: rotate(0deg)   scale(1);    }
+    25%  { transform: rotate(-15deg) scale(1.08); }
+    50%  { transform: rotate(15deg)  scale(1.05); }
+    75%  { transform: rotate(-8deg)  scale(1.08); }
+    100% { transform: rotate(0deg)   scale(1);    }
+  }
+  #rollBtn {
+    padding: 16px 45px; font-size: 20px;
+    background: linear-gradient(135deg, #ffcc00, #ff8800);
+    color: #1e1e2f;
+    border: none; border-radius: 14px; font-weight: bold;
+    letter-spacing: 1px; cursor: pointer;
+    box-shadow: 0 0 25px rgba(255,204,0,0.6);
+    transition: all 0.3s ease;
+  }
+  #rollBtn:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: 0 0 40px rgba(255,204,0,0.9);
+  }
+  #rollBtn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+  /* Попап задания */
+  #taskModal {
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(5,5,15,0.92);
+    backdrop-filter: blur(6px);
+    z-index: 100;
+    align-items: center; justify-content: center;
+    padding: 15px;
+  }
+  #taskModal.show { display: flex; }
+  .task-box {
+    background: linear-gradient(160deg, rgba(40,30,70,0.98), rgba(20,15,40,0.98));
+    border: 2px solid #a066ff;
+    border-radius: 24px;
+    padding: 25px;
+    max-width: 640px; width: 100%;
+    max-height: 95vh; overflow-y: auto;
+    text-align: center;
+    box-shadow: 0 0 50px rgba(160,102,255,0.6), inset 0 0 30px rgba(160,102,255,0.1);
+    animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes modalPop {
+    from { opacity: 0; transform: scale(0.8); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .task-box h2 {
+    color: #ffcc00;
+    text-shadow: 0 0 15px #ffcc00;
+    margin: 8px 0 12px;
+    font-size: 24px;
+  }
+  .task-box .hint { font-size: 14px; opacity: 0.7; margin-bottom: 10px; }
+  .task-box .timer {
+    font-size: 36px; font-weight: bold;
+    color: #ff4d4d;
+    text-shadow: 0 0 15px #ff4d4d;
+    margin: 5px 0 15px;
+    transition: all 0.3s ease;
+  }
+  .task-box .timer.ok {
+    color: #4dff88;
+    text-shadow: 0 0 20px #4dff88;
+    animation: timerPulse 0.8s ease-in-out infinite;
+  }
+  @keyframes timerPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+
+  /* Холст */
+  #drawCanvas {
+    background: white;
+    border-radius: 12px;
+    touch-action: none;
+    cursor: crosshair;
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    box-shadow: 0 0 25px rgba(77,255,136,0.5);
+  }
+  .palette {
+    display: flex; flex-wrap: wrap;
+    gap: 8px; justify-content: center; margin: 12px 0;
+  }
+  .color-swatch {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.3);
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  .color-swatch:hover { transform: scale(1.15); }
+  .color-swatch.active {
+    border-color: #ffcc00;
+    transform: scale(1.25);
+    box-shadow: 0 0 15px #ffcc00;
+  }
+  .tool-row {
+    display: flex; gap: 10px; justify-content: center;
+    align-items: center; margin: 10px 0; flex-wrap: wrap;
+  }
+  .tool-row button {
+    padding: 9px 18px;
+    border: 2px solid #555;
+    border-radius: 10px;
+    background: rgba(30,30,60,0.7);
+    color: #e0e0ff;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.25s ease;
+  }
+  .tool-row button:hover {
+    border-color: #a066ff;
+    box-shadow: 0 0 15px rgba(160,102,255,0.5);
+  }
+  .tool-row .size-btn.active {
+    background: linear-gradient(135deg, #a066ff, #ff4d9f);
+    border-color: #ff4d9f;
+    color: white;
+    box-shadow: 0 0 15px rgba(255,77,159,0.6);
+  }
+  /* Крепость */
+  #fortGrid {
+    display: grid;
+    grid-template-columns: repeat(5, 60px);
+    gap: 6px;
+    justify-content: center;
+    margin: 15px auto;
+  }
+  .fort-cell {
+    width: 60px; height: 60px;
+    background: rgba(30,30,60,0.7);
+    border: 2px dashed rgba(255,166,77,0.4);
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    transition: all 0.2s ease;
+  }
+  .fort-cell:hover {
+    border-color: #ffa64d;
+    box-shadow: 0 0 15px rgba(255,166,77,0.5);
+  }
+  .fort-cell.wall {
+    background: linear-gradient(135deg, rgba(160,120,60,0.4), rgba(100,70,30,0.5));
+    border: 2px solid #aa8844;
+    box-shadow: 0 0 12px rgba(170,136,68,0.6);
+  }
+  .fort-cell.tower {
+    background: linear-gradient(135deg, rgba(255,166,77,0.35), rgba(160,80,20,0.5));
+    border: 2px solid #ffa64d;
+    box-shadow: 0 0 18px rgba(255,166,77,0.8);
+  }
+
+ 
+  .task-buttons {
+    display: flex; gap: 15px; justify-content: center;
+    margin-top: 18px; flex-wrap: wrap;
+  }
+  .task-buttons button {
+    padding: 13px 28px;
+    font-size: 16px;
+    border: none; border-radius: 12px;
+    font-weight: bold; cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .btn-done {
+    background: linear-gradient(135deg, #4dff88, #22aa55);
+    color: #0a0a14;
+    box-shadow: 0 0 20px rgba(77,255,136,0.6);
+  }
+  .btn-done:hover { transform: scale(1.05); box-shadow: 0 0 35px rgba(77,255,136,0.9); }
+  .btn-fail {
+    background: linear-gradient(135deg, #ff4d4d, #aa2222);
+    color: white;
+    box-shadow: 0 0 20px rgba(255,77,77,0.6);
+  }
+  .btn-fail:hover { transform: scale(1.05); box-shadow: 0 0 35px rgba(255,77,77,0.9); }
+
+  /* Финал */
+  #finishModal {
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(5,5,15,0.95);
+    z-index: 200;
+    align-items: center; justify-content: center;
+    padding: 15px;
+  }
+  #finishModal.show { display: flex; }
+  .finish-box {
+    background: linear-gradient(160deg, rgba(50,35,80,0.98), rgba(20,15,40,0.98));
+    border: 3px solid #ffcc00;
+    border-radius: 24px;
+    padding: 40px 35px;
+    max-width: 520px; width: 100%;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(255,204,0,0.6), inset 0 0 40px rgba(255,204,0,0.1);
+    animation: modalPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .finish-box h2 {
+    color: #ffcc00;
+    font-size: 34px;
+    text-shadow: 0 0 20px #ffcc00, 0 0 40px #ff8800;
+    margin-bottom: 20px;
+    animation: titlePulse 2s ease-in-out infinite;
+  }
+  .finish-box ol {
+    text-align: left;
+    font-size: 20px;
+    line-height: 1.9;
+    padding-left: 30px;
+    margin-bottom: 25px;
+  }
+  .finish-box ol li { padding-left: 8px; }
+  .finish-box button {
+    padding: 16px 45px;
+    background: linear-gradient(135deg, #ffcc00, #ff8800);
+    color: #1e1e2f;
+    border: none; border-radius: 14px;
+    font-size: 18px; font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 0 25px rgba(255,204,0,0.7);
+    transition: all 0.3s ease;
+  }
+  .finish-box button:hover { transform: scale(1.07); box-shadow: 0 0 45px rgba(255,204,0,1); }
+
+  /* Конфетти */
+  .confetti {
+    position: fixed;
+    width: 10px; height: 10px;
+    top: -20px;
+    z-index: 250;
+    pointer-events: none;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    to { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- СТАРТОВЫЙ ЭКРАН -->
+<div id="startScreen">
+  <h1>🎲 Paty-XRT</h1>
+  <h2>Сколько игроков?</h2>
+  <div id="playerChoice">
+    <button class="player-btn" data-count="2">👥 2 игрока</button>
+    <button class="player-btn" data-count="3">👥 3 игрока</button>
+    <button class="player-btn" data-count="4">👥 4 игрока</button>
+  </div>
+  <br>
+  <button class="start-go" id="startBtn" disabled>Начать игру</button>
+</div>
+
+<!-- ИГРОВОЙ ЭКРАН -->
+<div id="gameScreen">
+  <h1>🎲 Paty-XRT</h1>
+  <div id="scoreboard"></div>
+  <div id="turnInfo">Ход игрока: <span id="turnName">—</span></div>
+  <div id="board"></div>
+  <div id="legend">
+    <div class="legend-item type-sound">🎤 Микрофон</div>
+    <div class="legend-item type-draw">🎨 Рисунок</div>
+    <div class="legend-item type-fort">🏰 Крепость</div>
+    <div class="legend-item type-guess">🕵️ Угадай кто</div>
+  </div>
+  <div id="controls">
+    <div class="dice-display" id="diceDisplay">?</div>
+    <button id="rollBtn" onclick="rollDice()">Бросить кубик</button>
+  </div>
+</div>
+
+<!-- ПОПАП ЗАДАНИЯ -->
+<div id="taskModal">
+  <div class="task-box">
+    <h2 id="taskTitle">Задание</h2>
+    <div class="hint" id="taskHint"></div>
+    <div class="timer" id="taskTimer">90</div>
+    <div id="taskContent"></div>
+    <div class="task-buttons">
+      <button class="btn-fail" onclick="finishTask(false)">❌ Провал</button>
+      <button class="btn-done" onclick="finishTask(true)">✅ Выполнено (+2)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ФИНАЛ -->
+<div id="finishModal">
+  <div class="finish-box">
+    <h2>🏆 Игра окончена!</h2>
+    <ol id="finalScores"></ol>
+    <button onclick="location.reload()">Играть снова</button>
+  </div>
+</div>
+
+<script>
+// ==================== ДАННЫЕ ====================
+const COLORS = {
+  1: { name: 'Красный', css: '#ff4d4d' },
+  2: { name: 'Синий',   css: '#4d9fff' },
+  3: { name: 'Зелёный', css: '#4dff88' },
+  4: { name: 'Жёлтый',  css: '#ffcc00' }
+};
+
+// Клетки: индекс 0 — СТАРТ, дальше 30 игровых клеток
+const CELL_TYPES = [
+  'start',
+  'normal','normal','sound','normal','draw','normal',
+  'fort','normal','normal','guess','sound','normal',
+  'draw','normal','fort','normal','sound','normal',
+  'guess','normal','draw','normal','fort','normal',
+  'sound','normal','guess','normal','draw','fort'
+];
+
+const TASKS = {
+  sound: { icon: '🎤', title: '🎤 Повтори звук',      hint: 'Слушай звук, который издаёт сосед справа. Повтори его как можно точнее!' },
+  draw:  { icon: '🎨', title: '🎨 Нарисуй друга',     hint: 'У тебя 90 секунд, чтобы нарисовать любого игрока за столом.' },
+  fort:  { icon: '🏰', title: '🏰 Построй крепость',  hint: 'Из подручных предметов построй крепость за 90 секунд.' },
+  guess: { icon: '🕵️', title: '🕵️ Угадай кто',        hint: 'Опиши одного из игроков словами (не называя имени).' }
+};
+
+const TOTAL_CELLS = CELL_TYPES.length;
+
+// ==================== СОСТОЯНИЕ ====================
+let playerCount = 0;
+let players = [];
+let currentPlayerIndex = 0;
+let isMoving = false;
+let timerInterval = null;
+let currentTaskType = null;
+
+// Рисование
+let currentColor = '#000000';
+let currentSize = 4;
+
+// ==================== СТАРТ ====================
+document.querySelectorAll('.player-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    playerCount = parseInt(btn.dataset.count);
+    document.getElementById('startBtn').disabled = false;
+  });
+});
+document.getElementById('startBtn').addEventListener('click', startGame);
+
+function startGame() {
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'block';
+
+  players = [];
+  for (let i = 1; i <= playerCount; i++) {
+    players.push({ id: i, name: COLORS[i].name, color: COLORS[i].css, pos: 0, score: 0 });
+  }
+  currentPlayerIndex = 0;
+
+  buildBoard();
+  updateScoreboard();
+  updateTurn();
+}
+
+// ==================== ПОЛЕ ====================
+function buildBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+
+  for (let i = 0; i < TOTAL_CELLS; i++) {
+    const cell = document.createElement('div');
+    const type = CELL_TYPES[i];
+    cell.className = 'cell' + (type === 'start' ? ' cell-start' : ' type-' + type);
+    cell.id = 'cell-' + i;
+    cell.textContent = type === 'start' ? 'СТАРТ' : i;
+    board.appendChild(cell);
+  }
+
+  // Фишки на старте
+  const startCell = document.getElementById('cell-0');
+  players.forEach(p => {
+    const piece = document.createElement('div');
+    piece.className = 'player p' + p.id;
+    piece.id = 'piece-' + p.id;
+    startCell.appendChild(piece);
+  });
+
+  highlightCell(0);
+}
+
+function highlightCell(index) {
+  document.querySelectorAll('.cell').forEach(c => c.classList.remove('active'));
+  const cell = document.getElementById('cell-' + index);
+  if (cell) cell.classList.add('active');
+}
+
+function updateScoreboard() {
+  const sb = document.getElementById('scoreboard');
+  sb.innerHTML = '';
+  players.forEach((p, idx) => {
+    const card = document.createElement('div');
+    card.className = 'score-card' + (idx === currentPlayerIndex ? ' active' : '');
+    card.style.color = p.color;
+    card.style.borderColor = idx === currentPlayerIndex ? p.color : 'rgba(120,120,180,0.4)';
+    card.innerHTML = '<div class="name" style="color:' + p.color + '">' + p.name + '</div>' +
+                     '<div class="pts" data-player="' + p.id + '">' + p.score + '</div>';
+    sb.appendChild(card);
+  });
+}
+
+function bumpScore(playerId) {
+  const el = document.querySelector('.pts[data-player="' + playerId + '"]');
+  if (el) {
+    el.classList.remove('bump');
+    void el.offsetWidth; // force reflow
+    el.classList.add('bump');
+  }
+}
+
+function updateTurn() {
+  const p = players[currentPlayerIndex];
+  const el = document.getElementById('turnName');
+  el.textContent = p.name;
+  el.style.color = p.color;
+  el.parentElement.style.textShadow = '0 0 8px ' + p.color;
+  updateScoreboard();
+}
+
+// ==================== КУБИК ====================
+function rollDice() {
+  if (isMoving) return;
+  isMoving = true;
+  document.getElementById('rollBtn').disabled = true;
+
+  const diceDisplay = document.getElementById('diceDisplay');
+  diceDisplay.classList.add('rolling');
+
+  const dice = Math.floor(Math.random() * 6) + 1;
+
+  // Анимация кубика — показываем случайные значения 600 мс
+  let spinCount = 0;
+  const spinInterval = setInterval(() => {
+    diceDisplay.textContent = Math.floor(Math.random() * 6) + 1;
+    spinCount++;
+    if (spinCount > 8) {
+      clearInterval(spinInterval);
+      diceDisplay.classList.remove('rolling');
+      diceDisplay.textContent = dice;
+      diceDisplay.style.boxShadow = '0 0 50px rgba(255,204,0,1)';
+      setTimeout(() => {
+        diceDisplay.style.boxShadow = '0 0 30px rgba(255,204,0,0.7)';
+      }, 400);
+      startMoving(dice);
+    }
+  }, 70);
+}
+
+function startMoving(dice) {
+  const player = players[currentPlayerIndex];
+  const target = Math.min(player.pos + dice, TOTAL_CELLS - 1);
+
+  const interval = setInterval(() => {
+    if (player.pos < target) {
+      player.pos++;
+      player.score += 1;
+      movePiece(player.id, player.pos);
+      highlightCell(player.pos);
+      updateScoreboard();
+      bumpScore(player.id);
+    } else {
+      clearInterval(interval);
+      isMoving = false;
+
+      const cellType = CELL_TYPES[player.pos];
+
+      if (player.pos === TOTAL_CELLS - 1) {
+        player.score += 5;
+        updateScoreboard();
+        setTimeout(showFinish, 500);
+      } else if (cellType !== 'normal' && cellType !== 'start') {
+        setTimeout(() => showTask(cellType), 400);
+      } else {
+        setTimeout(nextTurn, 600);
+      }
+    }
+  }, 260);
+}
+
+function movePiece(playerId, cellIndex) {
+  const piece = document.getElementById('piece-' + playerId);
+  const target = document.getElementById('cell-' + cellIndex);
+  if (piece && target) target.appendChild(piece);
+}
+
+function nextTurn() {
+  currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+  updateTurn();
+  document.getElementById('rollBtn').disabled = false;
+}
+
+// ==================== ЗАДАНИЯ ====================
+function showTask(type) {
+  currentTaskType = type;
+  const task = TASKS[type];
+  document.getElementById('taskTitle').textContent = task.title;
+  document.getElementById('taskHint').textContent = task.hint;
+
+  const content = document.getElementById('taskContent');
+  content.innerHTML = '';
+
+  // Определяем, какое задание показать
+  if (type === 'draw') {
+    buildDrawUI(content);
+  } else if (type === 'sound') {
+    buildMicUI(content);
+     } else if (type === 'fort') {
+    buildFortUI(content);
+     } else if (type === 'guess') {
+    buildGuessUI(content);
+  } else { 
+    // Остальные задания — пока текстовые заглушки
+    content.innerHTML = '<div style="padding:30px;font-size:16px;opacity:0.7;">' +
+                        '🎯 Задание скоро появится в следующем обновлении!</div>';
+  }
+
+  document.getElementById('taskModal').classList.add('show');
+
+  // Таймер 90 секунд
+  let timeLeft = 90;
+  const timerEl = document.getElementById('taskTimer');
+  timerEl.textContent = timeLeft;
+  timerEl.classList.remove('ok');
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    timerEl.textContent = timeLeft;
+    if (timeLeft <= 10) timerEl.classList.add('ok');
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      timerEl.textContent = '0';
+    }
+  }, 1000);
+}
+
+function finishTask(success) {
+  clearInterval(timerInterval);
+  document.getElementById('taskModal').classList.remove('show');
+  if (success) {
+    players[currentPlayerIndex].score += 2;
+    updateScoreboard();
+    bumpScore(players[currentPlayerIndex].id);
+  }
+  setTimeout(nextTurn, 400);
+}
+
+// ==================== ХОЛСТ ДЛЯ РИСОВАНИЯ ====================
+function buildDrawUI(container) {
+  container.innerHTML = `
+    <div style="font-size:15px;margin-bottom:10px;opacity:0.85;">
+      Рисуй мышкой или пальцем. Выбери цвет и толщину:
+    </div>
+    <canvas id="drawCanvas" width="520" height="320"></canvas>
+    <div class="palette" id="palette"></div>
+    <div class="tool-row">
+      <button class="size-btn active" data-size="2">Тонко</button>
+      <button class="size-btn" data-size="4">Средне</button>
+      <button class="size-btn" data-size="10">Толсто</button>
+      <button id="clearCanvas">🗑 Очистить</button>
+    </div>
+  `;
+
+  const canvas = document.getElementById('drawCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = currentColor;
+  ctx.lineWidth = currentSize;
+
+  // Палитра
+  const colors = ['#000000', '#ff4d4d', '#4d9fff', '#4dff88', '#ffcc00',
+                  '#a066ff', '#ff4d9f', '#ffa64d', '#8B4513', '#ffffff'];
+  const palette = document.getElementById('palette');
+  colors.forEach(c => {
+    const sw = document.createElement('div');
+    sw.className = 'color-swatch' + (c === currentColor ? ' active' : '');
+    sw.style.background = c;
+    sw.onclick = () => {
+      currentColor = c;
+      ctx.strokeStyle = c;
+      palette.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+      sw.classList.add('active');
+    };
+    palette.appendChild(sw);
+  });
+
+  // Толщина
+  container.querySelectorAll('.size-btn').forEach(b => {
+    b.onclick = () => {
+      currentSize = parseInt(b.dataset.size);
+      ctx.lineWidth = currentSize;
+      container.querySelectorAll('.size-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    };
+  });
+
+  // Очистить
+  document.getElementById('clearCanvas').onclick = () => {
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  };
+
+  // Рисование — мышь
+  let drawing = false;
+  const getPos = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    let clientX, clientY;
+    if (e.touches) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; }
+    else { clientX = e.clientX; clientY = e.clientY; }
+    return [
+      (clientX - rect.left) * (canvas.width / rect.width),
+      (clientY - rect.top) * (canvas.height / rect.height)
+    ];
+  };
+  const start = (e) => { e.preventDefault(); drawing = true; const [x,y] = getPos(e); ctx.beginPath(); ctx.moveTo(x,y); };
+  const move  = (e) => { if (!drawing) return; e.preventDefault(); const [x,y] = getPos(e); ctx.lineTo(x,y); ctx.stroke(); };
+  const stop  = () => { drawing = false; };
+
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  canvas.addEventListener('mouseup', stop);
+  canvas.addEventListener('mouseleave', stop);
+  canvas.addEventListener('touchstart', start, { passive: false });
+  canvas.addEventListener('touchmove', move, { passive: false });
+  canvas.addEventListener('touchend', stop);
+}
+
+// ==================== ФИНАЛ + КОНФЕТТИ ====================
+function showFinish() {
+  const sorted = [...players].sort((a, b) => b.score - a.score);
+  const list = document.getElementById('finalScores');
+  list.innerHTML = '';
+  sorted.forEach(p => {
+    const li = document.createElement('li');
+    li.innerHTML = '<span style="color:' + p.color + ';font-weight:bold;text-shadow:0 0 10px ' + p.color + ';">' + p.name + '</span> — ' + p.score + ' очков';
+    list.appendChild(li);
+  });
+  document.getElementById('finishModal').classList.add('show');
+
+  // Конфетти
+  const colors = ['#ffcc00','#ff4d4d','#4d9fff','#4dff88','#a066ff','#ff4d9f'];
+  for (let i = 0; i < 80; i++) {
+    setTimeout(() => {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (2 + Math.random() * 2) + 's';
+      c.style.transform = 'rotate(' + (Math.random() * 360) + 'deg)';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 5000);
+    }, i * 40);
+  }
+ }
+// ==================== МИКРОФОН ====================
+let mediaRecorder = null;
+let audioChunks = [];
+let audioBlob = null;
+let audioURL = null;
+
+function buildMicUI(container) {
+  container.innerHTML = `
+    <div style="font-size:15px;margin-bottom:15px;opacity:0.85;">
+      🎤 Запиши любой звук или фразу. Потом прослушай и дай остальным повторить!
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:15px;padding:10px;">
+      <div id="micStatus" style="font-size:16px;color:#ffcc00;min-height:24px;text-shadow:0 0 10px #ffcc00;">
+        Нажми «Начать запись»
+      </div>
+      <div id="micPulse" style="width:70px;height:70px;border-radius:50%;background:rgba(255,77,77,0.15);border:3px solid #ff4d4d;display:flex;align-items:center;justify-content:center;font-size:32px;transition:all 0.3s;">
+        🎤
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+        <button id="micRecBtn" style="padding:13px 25px;border:none;border-radius:12px;font-weight:bold;font-size:15px;cursor:pointer;background:linear-gradient(135deg,#ff4d4d,#aa2222);color:white;box-shadow:0 0 20px rgba(255,77,77,0.6);">
+          🔴 Начать запись
+        </button>
+        <button id="micPlayBtn" disabled style="padding:13px 25px;border:none;border-radius:12px;font-weight:bold;font-size:15px;cursor:pointer;background:linear-gradient(135deg,#4d9fff,#2266aa);color:white;box-shadow:0 0 20px rgba(77,159,255,0.6);opacity:0.4;">
+          ▶️ Прослушать
+        </button>
+      </div>
+    </div>
+  `;
+
+  const recBtn = document.getElementById('micRecBtn');
+  const playBtn = document.getElementById('micPlayBtn');
+  const status = document.getElementById('micStatus');
+  const pulse = document.getElementById('micPulse');
+
+  audioChunks = [];
+  audioBlob = null;
+  audioURL = null;
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    try { mediaRecorder.stop(); } catch(e) {}
+  }
+
+  recBtn.onclick = async () => {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+           // Safari: mp4, Chrome/Firefox: webm
+      const mimeType = MediaRecorder.isTypeSupported('audio/mp4')
+        ? 'audio/mp4'
+        : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '');
+      mediaRecorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+      audioChunks = [];
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) audioChunks.push(e.data);
+      };
+      mediaRecorder.onstop = () => {
+        audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/mp4' });
+        audioURL = URL.createObjectURL(audioBlob);
+        playBtn.disabled = false;
+        playBtn.style.opacity = '1';
+        recBtn.textContent = '🔴 Начать запись';
+        recBtn.style.background = 'linear-gradient(135deg,#ff4d4d,#aa2222)';
+        status.textContent = '✅ Записано! Нажми «Прослушать»';
+        status.style.color = '#4dff88';
+        status.style.textShadow = '0 0 10px #4dff88';
+        pulse.style.background = 'rgba(77,255,136,0.15)';
+        pulse.style.borderColor = '#4dff88';
+        pulse.textContent = '✅';
+        pulse.style.animation = 'none';
+        stream.getTracks().forEach(t => t.stop());
+      };
+      mediaRecorder.start();
+      recBtn.textContent = '⏹ Остановить';
+      recBtn.style.background = 'linear-gradient(135deg,#ffcc00,#ff8800)';
+      recBtn.style.color = '#1e1e2f';
+      status.textContent = '🎤 Идёт запись... Говори!';
+      status.style.color = '#ff4d4d';
+      status.style.textShadow = '0 0 10px #ff4d4d';
+      pulse.style.background = 'rgba(255,77,77,0.4)';
+      pulse.style.borderColor = '#ff4d4d';
+      pulse.textContent = '🔴';
+      pulse.style.animation = 'timerPulse 0.8s ease-in-out infinite';
+    } catch (err) {
+      status.textContent = '❌ Нет доступа к микрофону. Разреши в браузере.';
+      status.style.color = '#ff4d4d';
+      status.style.textShadow = '0 0 10px #ff4d4d';
+    }
+  };
+
+    playBtn.onclick = () => {
+    if (!audioURL) return;
+    try {
+      const audio = new Audio(audioURL);
+      audio.volume = 1.0;
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          status.textContent = '▶️ Воспроизведение...';
+        }).catch(err => {
+          status.textContent = '❌ Ошибка: ' + err.message;
+          status.style.color = '#ff4d4d';
+          status.style.textShadow = '0 0 10px #ff4d4d';
+        });
+      }
+    } catch (err) {
+      status.textContent = '❌ Ошибка: ' + err.message;
+      status.style.color = '#ff4d4d';
+      status.style.textShadow = '0 0 10px #ff4d4d';
+    }
+  };
+}
+ 
+// ==================== КРЕПОСТЬ ====================
+function buildFortUI(container) {
+  container.innerHTML = `
+    <div style="font-size:15px;margin-bottom:8px;opacity:0.85;">
+      🏰 Клик = стена 🧱 · Второй клик = башня 🏰 · Третий = пусто
+    </div>
+    <div id="fortGrid"></div>
+    <div class="tool-row">
+      <button id="fortClear">🗑 Очистить</button>
+    </div>
+  `;
+
+  const grid = document.getElementById('fortGrid');
+  for (let i = 0; i < 25; i++) {
+    const c = document.createElement('div');
+    c.className = 'fort-cell';
+    c.dataset.state = '0';
+    c.onclick = () => {
+      let s = (parseInt(c.dataset.state) + 1) % 3;
+      c.dataset.state = s;
+      c.classList.remove('wall', 'tower');
+      c.textContent = '';
+      if (s === 1) { c.classList.add('wall'); c.textContent = '🧱'; }
+      else if (s === 2) { c.classList.add('tower'); c.textContent = '🏰'; }
+    };
+    grid.appendChild(c);
+  }
+
+  document.getElementById('fortClear').onclick = () => {
+    grid.querySelectorAll('.fort-cell').forEach(c => {
+      c.dataset.state = '0';
+      c.classList.remove('wall', 'tower');
+      c.textContent = '';
+    });
+  };
+}
+ 
+// ==================== УГАДАЙ КТО ====================
+function buildGuessUI(container) {
+  container.innerHTML = `
+    <div style="font-size:15px;margin-bottom:10px;opacity:0.85;">
+      ✍️ Опиши одного из игроков (не называя имени):
+    </div>
+    <textarea id="guessText" placeholder="Например: всегда опаздывает, любит кофе, громко смеётся..."
+      style="width:92%;padding:10px;font-size:15px;border-radius:10px;border:2px solid #555;background:rgba(30,30,60,0.7);color:#e0e0ff;resize:vertical;min-height:70px;font-family:inherit;outline:none;"></textarea>
+    <div style="margin:15px 0 8px;font-size:15px;opacity:0.85;">
+      🎨 А теперь нарисуй его:
+    </div>
+    <canvas id="guessCanvas" width="500" height="240"
+      style="background:white;border-radius:10px;touch-action:none;cursor:crosshair;display:block;margin:0 auto;max-width:100%;box-shadow:0 0 20px rgba(255,77,159,0.5);"></canvas>
+    <div class="palette" id="guessPalette"></div>
+    <div class="tool-row">
+      <button class="size-btn active" data-size="2" data-target="guess">Тонко</button>
+      <button class="size-btn" data-size="4" data-target="guess">Средне</button>
+      <button class="size-btn" data-size="10" data-target="guess">Толсто</button>
+      <button id="guessClear">🗑 Очистить</button>
+    </div>
+  `;
+
+  const canvas = document.getElementById('guessCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = currentColor;
+  ctx.lineWidth = currentSize;
+
+  const colors = ['#000000', '#ff4d4d', '#4d9fff', '#4dff88', '#ffcc00',
+                  '#a066ff', '#ff4d9f', '#ffa64d', '#8B4513', '#ffffff'];
+  const palette = document.getElementById('guessPalette');
+  colors.forEach(c => {
+    const sw = document.createElement('div');
+    sw.className = 'color-swatch' + (c === currentColor ? ' active' : '');
+    sw.style.background = c;
+    sw.onclick = () => {
+      currentColor = c;
+      ctx.strokeStyle = c;
+      palette.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+      sw.classList.add('active');
+    };
+    palette.appendChild(sw);
+  });
+
+  container.querySelectorAll('.size-btn[data-target="guess"]').forEach(b => {
+    b.onclick = () => {
+      currentSize = parseInt(b.dataset.size);
+      ctx.lineWidth = currentSize;
+      container.querySelectorAll('.size-btn[data-target="guess"]').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    };
+  });
+
+  document.getElementById('guessClear').onclick = () => {
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  };
+
+  let drawing = false;
+  const getPos = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    let clientX, clientY;
+    if (e.touches) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; }
+    else { clientX = e.clientX; clientY = e.clientY; }
+    return [
+      (clientX - rect.left) * (canvas.width / rect.width),
+      (clientY - rect.top) * (canvas.height / rect.height)
+    ];
+  };
+  const start = (e) => { e.preventDefault(); drawing = true; const [x,y] = getPos(e); ctx.beginPath(); ctx.moveTo(x,y); };
+  const move  = (e) => { if (!drawing) return; e.preventDefault(); const [x,y] = getPos(e); ctx.lineTo(x,y); ctx.stroke(); };
+  const stop  = () => { drawing = false; };
+
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  canvas.addEventListener('mouseup', stop);
+  canvas.addEventListener('mouseleave', stop);
+  canvas.addEventListener('touchstart', start, { passive: false });
+  canvas.addEventListener('touchmove', move, { passive: false });
+  canvas.addEventListener('touchend', stop);
+}
+</script>
+</body>
+</html>

@@ -221,12 +221,9 @@
   }
 
   /* Игровая область */
-    main {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
+     main {
+    display: block;
+    padding: 0;
     height: 100vh;
     overflow: hidden;
     position: relative;
@@ -236,26 +233,29 @@
     background-repeat: no-repeat;
   }
 
-  #board {
-    display: grid;
-    grid-template-columns: repeat(6, 78px);
-    gap: 8px;
-    justify-content: center;
-    margin-bottom: 20px;
+    #board {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 1;
   }
-    .cell {
-    width: 95px; height: 95px;
-    background: rgba(20,20,40,0.35);
-    border: 2px solid rgba(255,255,255,0.35);
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 24px; font-weight: bold;
-    position: relative;
+      .cell {
+    position: absolute;
+    width: 50px; height: 50px;
+    margin-left: -25px;
+    margin-top: -25px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.55);
+    background: rgba(15,15,35,0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
     color: rgba(255,255,255,0.9);
-    text-shadow: 0 0 6px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,1);
+    text-shadow: 0 0 4px rgba(0,0,0,1), 0 0 2px rgba(0,0,0,1);
     transition: all 0.35s ease;
     backdrop-filter: blur(2px);
-    box-shadow: 0 0 8px rgba(0,0,0,0.5);
+    box-shadow: 0 0 8px rgba(0,0,0,0.7);
   }
   .cell.active {
     border-color: #ffcc00;
@@ -324,29 +324,34 @@
     box-shadow: 0 0 15px rgba(255,221,68,0.6);
   }
 
-  .player {
-    width: 20px; height: 20px;
+    .player {
+    position: absolute;
+    width: 14px; height: 14px;
     border-radius: 50%;
-    position: absolute; bottom: 4px;
-    border: 2px solid rgba(255,255,255,0.85);
-    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-    z-index: 2;
+    border: 2px solid rgba(255,255,255,0.95);
+    z-index: 3;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
-  .p1 { background: #ff4d4d; left: 5px;  box-shadow: 0 0 10px #ff4d4d; }
-  .p2 { background: #4d9fff; right: 5px; box-shadow: 0 0 10px #4d9fff; }
-  .p3 { background: #4dff88; left: 5px;  bottom: 27px; box-shadow: 0 0 10px #4dff88; }
-  .p4 { background: #ffcc00; right: 5px; bottom: 27px; box-shadow: 0 0 10px #ffcc00; }
+  .p1 { background: #ff4d4d; top: 2px; left: 2px; box-shadow: 0 0 8px #ff4d4d; }
+  .p2 { background: #4d9fff; top: 2px; right: 2px; box-shadow: 0 0 8px #4d9fff; }
+  .p3 { background: #4dff88; bottom: 2px; left: 2px; box-shadow: 0 0 8px #4dff88; }
+  .p4 { background: #ffcc00; bottom: 2px; right: 2px; box-shadow: 0 0 8px #ffcc00; }
 
   /* Управление (кубик) */
-  #controls {
+    #controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     align-items: center;
-    gap: 20px;
-    padding: 15px 25px;
-    background: rgba(20,20,40,0.8);
-    border: 2px solid rgba(160,102,255,0.4);
+    gap: 18px;
+    padding: 12px 22px;
+    background: rgba(15,15,35,0.9);
+    border: 2px solid rgba(160,102,255,0.5);
     border-radius: 18px;
-    box-shadow: 0 0 30px rgba(160,102,255,0.25);
+    box-shadow: 0 0 30px rgba(160,102,255,0.4);
+    z-index: 10;
   }
   .dice-display {
     width: 75px; height: 75px;
@@ -794,6 +799,42 @@ const COLORS = {
   3: { name: 'Зелёный', css: '#4dff88' },
   4: { name: 'Жёлтый',  css: '#ffcc00' }
 };
+ 
+ // Координаты клеток на карте (в % от размера поля)
+// Можно подправить, если кружок окажется не на тропинке
+const CELL_POSITIONS = [
+  { x: 8,  y: 15 },   // 0 СТАРТ
+  { x: 15, y: 11 },   // 1
+  { x: 23, y: 9  },   // 2
+  { x: 30, y: 9  },   // 3
+  { x: 37, y: 12 },   // 4
+  { x: 42, y: 17 },   // 5
+  { x: 44, y: 24 },   // 6
+  { x: 44, y: 31 },   // 7
+  { x: 41, y: 38 },   // 8
+  { x: 36, y: 42 },   // 9
+  { x: 30, y: 43 },   // 10
+  { x: 24, y: 41 },   // 11
+  { x: 20, y: 36 },   // 12
+  { x: 19, y: 30 },   // 13
+  { x: 21, y: 25 },   // 14
+  { x: 26, y: 22 },   // 15
+  { x: 32, y: 23 },   // 16
+  { x: 37, y: 27 },   // 17
+  { x: 40, y: 33 },   // 18
+  { x: 42, y: 41 },   // 19
+  { x: 44, y: 49 },   // 20
+  { x: 44, y: 57 },   // 21
+  { x: 42, y: 65 },   // 22
+  { x: 38, y: 72 },   // 23
+  { x: 33, y: 77 },   // 24
+  { x: 28, y: 81 },   // 25
+  { x: 24, y: 85 },   // 26
+  { x: 22, y: 90 },   // 27
+  { x: 24, y: 94 },   // 28
+  { x: 30, y: 96 },   // 29
+  { x: 37, y: 95 }    // 30 ФИНИШ
+};
 
 // Клетки: индекс 0 — СТАРТ, дальше 1..30 игровых
 // Задания: sound, draw, fort, guess
@@ -888,10 +929,19 @@ function buildBoard() {
     const type = CELL_TYPES[i];
     cell.className = 'cell' + (type === 'start' ? ' cell-start' : ' type-' + type);
     cell.id = 'cell-' + i;
-    cell.textContent = type === 'start' ? 'СТАРТ' : i;
+
+    // Позиция на карте
+    const pos = CELL_POSITIONS[i];
+    cell.style.left = pos.x + '%';
+    cell.style.top = pos.y + '%';
+
+    // Надпись: СТАРТ или номер
+    cell.textContent = type === 'start' ? '★' : i;
+
     board.appendChild(cell);
   }
 
+  // Фишки на СТАРТ
   const startCell = document.getElementById('cell-0');
   players.forEach(p => {
     const piece = document.createElement('div');
@@ -902,7 +952,7 @@ function buildBoard() {
 
   highlightCell(0);
 }
-
+ 
 function highlightCell(index) {
   document.querySelectorAll('.cell').forEach(c => c.classList.remove('active'));
   const cell = document.getElementById('cell-' + index);

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Редактор позиций Paty-XRT</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial; background: #222; overflow: hidden; }
+
+  #container {
+    position: relative;
+    width: 100vw; height: 100vh;
+    background-image: url('map.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    cursor: crosshair;
+  }
+
+  .dot {
+    position: absolute;
+    width: 28px; height: 28px;
+    margin-left: -14px; margin-top: -14px;
+    border-radius: 50%;
+    background: rgba(255, 204, 0, 0.95);
+    color: #000;
+    font-size: 12px;
+    font-weight: bold;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid white;
+    box-shadow: 0 0 10px rgba(0,0,0,0.9);
+    pointer-events: none;
+  }
+
+  #panel {
+    position: fixed; top: 10px; right: 10px;
+    background: rgba(0,0,0,0.92); color: #4dff88;
+    padding: 14px; border-radius: 10px;
+    font-family: monospace; font-size: 11px;
+    max-width: 420px; max-height: 90vh; overflow: auto;
+    border: 2px solid #4dff88;
+    z-index: 100;
+  }
+  #panel h3 { color: #ffcc00; margin-bottom: 8px; font-size: 14px; }
+  #panel button {
+    display: block; width: 100%; margin-top: 8px;
+    padding: 10px; border: none; border-radius: 6px;
+    background: #ffcc00; color: #000;
+    font-weight: bold; cursor: pointer; font-size: 13px;
+  }
+  #panel button:hover { background: #ffdd55; }
+  #coords {
+    background: #111; color: #4dff88;
+    padding: 8px; border-radius: 5px;
+    margin-top: 8px; white-space: pre;
+    max-height: 400px; overflow: auto;
+    font-size: 10px;
+  }
+</style>
+</head>
+<body>
+<div id="container"></div>
+
+<div id="panel">
+  <h3>📍 Расстановка клеток</h3>
+  <div id="status">Кликов: 0 / 31 — расставь по порядку: СТАРТ, 1, 2, … 30</div>
+  <div id="coords">Тут появятся координаты...</div>
+  <button onclick="copyCoords()">📋 Скопировать координаты</button>
+  <button onclick="undo()">↶ Отменить последний</button>
+  <button onclick="reset()">🔄 Начать заново</button>
+</div>
+
+<script>
+  const TOTAL = 31;
+  let positions = [];
+  const container = document.getElementById('container');
+  const coordsEl = document.getElementById('coords');
+  const statusEl = document.getElementById('status');
+
+  container.addEventListener('click', e => {
+    if (positions.length >= TOTAL) return;
+    const rect = container.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width * 100).toFixed(1);
+    const y = ((e.clientY - rect.top) / rect.height * 100).toFixed(1);
+    positions.push({ x: parseFloat(x), y: parseFloat(y) });
+    draw();
+  });
+
+  function draw() {
+    container.querySelectorAll('.dot').forEach(d => d.remove());
+    positions.forEach((p, i) => {
+      const dot = document.createElement('div');
+      dot.className = 'dot';
+      dot.textContent = i === 0 ? '★' : i;
+      dot.style.left = p.x + '%';
+      dot.style.top = p.y + '%';
+      container.appendChild(dot);
+    });
+    updatePanel();
+  }
+
+  function updatePanel() {
+    statusEl.textContent = 'Кликов: ' + positions.length + ' / ' + TOTAL;
+    if (positions.length === 0) {
+      coordsEl.textContent = 'Тут появятся координаты...';
+      return;
+    }
+    const lines = positions.map((p, i) =>
+      `  { x: ${p.x}, y: ${p.y} }${i < TOTAL - 1 ? ',' : ''}   // ${i}`
+    );
+    coordsEl.textContent = 'const CELL_POSITIONS = [\n' + lines.join('\n') + '\n];';
+  }
+
+  function copyCoords() {
+    navigator.clipboard.writeText(coordsEl.textContent).then(() => {
+      alert('✅ Скопировано! Отправь этот текст мне в чат.');
+    });
+  }
+
+  function undo() {
+    positions.pop();
+    draw();
+  }
+
+  function reset() {
+    if (confirm('Начать заново?')) {
+      positions = [];
+      draw();
+    }
+  }
+</script>
+</body>
+</html>
